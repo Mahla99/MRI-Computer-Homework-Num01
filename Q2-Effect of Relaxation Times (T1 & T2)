@@ -1,0 +1,130 @@
+
+%% Question 2 - RF pulse and T1 & T2 Relaxation time
+
+%%% Part A - Rotation around x, y, and z Functions
+% This Function is written in the end of the codes
+
+%%% Part B - T1 & T2 relaxation times
+% A function for this part has been written in function part named "bloch"
+
+%%% Part C - Magnetization Vector: 60x - 15ms - 45y - 10ms
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Magnetization Vector before RF pulse
+
+M0 = [0, 0, 1];
+T1 = 1;   % sec (1000ms)
+T2 = 0.1; % sec (100ms)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% 60 degree rotation around x-axis
+
+degree = 60;
+alpha = 2*pi*degree / 360;
+M_alpha1 = Rx_alpha(alpha, M0');
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% 15 ms delay
+
+t = 15/1000;
+M_tau1 = bloch(T1, T2, M_alpha1, t);
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% 45 degree rotation around y-axis
+
+degree = 45;
+alpha = 2*pi*degree / 360;
+M_alpha2 = Ry_alpha(alpha, M_tau1);
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% 10 ms delay
+
+t = 1/100; % sec
+M_tau2 = bloch(T1, T2, M_alpha2, t);
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Degrees between some of vectors
+% note: to check whether the rotations and delays are applying properly
+
+Red_Black = rad2deg(acos(dotprod(M0, M_alpha1)/(norm(M0)*norm(M_alpha1))));
+Blue_Green = rad2deg(acos(dotprod(M_tau1', M_alpha2)/(norm(M_tau1)*norm(M_alpha2))));
+Red_Green = rad2deg(acos(dotprod(M_alpha1', M_alpha2)/(norm(M_alpha1)*norm(M_alpha2))));
+Yellow_Green = rad2deg(acos(dotprod(M_tau2', M_alpha2)/(norm(M_tau2)*norm(M_alpha2))));
+Red_Blue = rad2deg(acos(dotprod(M_tau1', M_alpha1)/(norm(M_tau1)*norm(M_alpha1))));
+Yellow_Blue = rad2deg(acos(dotprod(M_tau1', M_tau2)/(norm(M_tau1)*norm(M_tau2))));
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Plotting
+
+M_all = [M0', M_alpha1, M_tau1, M_alpha2, M_tau2];
+
+figure
+view([1, 1, 1]);
+axis([-1 1 -1 1 -1 1]);
+hold on; grid on;
+xlabel('x-axis'); ylabel('y-axis'); zlabel('z-axis');
+colors = ["black", "red", "blue", "green", "yellow"];
+legends = ["Before RF Pulse", "After 60x RF pulse", "After 15ms Delay", "After 45y RF pulse", "After 10ms Delay"];
+title('Magnetization Vector after every cycle')
+
+
+for k = 1:size(M_all, 2)
+    quiver3(0, 0, 0, M_all(1, k), M_all(2, k), M_all(3, k), 'Color', colors(k), 'LineWidth', 2);
+    legend(legends(1:k));
+    pause(1)
+end
+
+%%% Part D - 3ms delay along RF pulses
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Parameters:
+% 60x & 3ms:
+t = 3/1000;
+M_60x_3ms = Relax_and_Rotation(T1, T2, M0', t, 'x', 60);
+
+% 45y & 3ms:
+M_45y_3ms = Relax_and_Rotation(T1, T2, M_60x_3ms, t, 'y', 45);
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Degrees between some of vectors
+% note: to check whether the rotations and delays are applying properly
+
+black_red = rad2deg(acos(dotprod(M0, M_60x_3ms)/(norm(M0)*norm(M_60x_3ms))));
+Blue_Red = rad2deg(acos(dotprod(M_45y_3ms', M_60x_3ms)/(norm(M_45y_3ms)*norm(M_60x_3ms))));
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Plotting
+
+M_all = [M0', M_60x_3ms, M_45y_3ms];
+
+figure
+view([1, 1, 1]);
+axis([-1 1 -1 1 -1 1]);
+hold on; grid on;
+xlabel('x-axis'); ylabel('y-axis'); zlabel('z-axis');
+colors = ["black", "red", "blue"];
+legends = ["Before RF Pulse", "After 60x RF pulse", "After 45y RF pulse"];
+title('RF Pulse with effect of 3ms delay along it')
+
+for k = 1:size(M_all, 2)
+    quiver3(0, 0, 0, M_all(1, k), M_all(2, k), M_all(3, k), 'Color', colors(k), 'LineWidth', 2);
+    legend(legends(1:k));
+    pause(1)
+end
+
+
+%%% Comparing last Magnetization Vector of part C and part D %%%%%%%%%%%%%%
+teta = rad2deg(acos(dotprod(M_45y_3ms', M_tau2)/(norm(M_45y_3ms)*norm(M_tau2))));
+
+norm_of_C = norm(M_tau2);
+norm_of_D = norm(M_45y_3ms);
+
+
+%%% Plotting
+
+M_all = [M_tau2, M_45y_3ms];
+
+figure
+view([1, 1, 1]);
+axis([-.5 .5 -.5 .5 -.5 .5]);
+hold on; grid on;
+xlabel('x-axis'); ylabel('y-axis'); zlabel('z-axis');
+colors = ["yellow", "blue"];
+legends = ["Method I", "Method II"];
+title('Comparing Final Magnetization Vector of two Methods')
+
+for k = 1:size(M_all, 2)
+    quiver3(0, 0, 0, M_all(1, k), M_all(2, k), M_all(3, k), 'Color', colors(k), 'LineWidth', 2);
+    legend(legends(1:k));
+end
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
