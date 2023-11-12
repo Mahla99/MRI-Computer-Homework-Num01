@@ -1,0 +1,279 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Magnetic Resonance Imaging   %%%
+%%% Dr. Keyvan Fard - Fall 2023  %%%
+%%% Student: Mahla Jafari Nezhad %%%
+%%% HW's number: CA01            %%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+clc;
+clear;
+close all;
+%% Question 1 - Bloch Equation
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%% Part A - ON Resonance
+M0 = [0; 0; 1];  % Initial value of M
+B0 = 1.5;        % (Tesla)
+B1 = 0.05;       % (Gauss)
+B1 = B1/10000;   % (Tesla)  -->  1 Tesla = 10000 Gauss
+gamma = 2*pi*42.58;       % (rad.MHz/T)   2*pi*Gyromagnetic ratio (MHz/T)
+w0 = gamma * B0;          %(rad.MHz)
+
+
+%%% On Resonance - Angular Velocity
+wrf = w0;
+
+% Define the time span
+tau_p = 2*pi/w0;    % (1/MHz)
+tspan = [0 tau_p];  %Time vector   (micro sec)
+alpha = gamma * B1 * tau_p;   %(rad)
+
+%%%%%%%%%%%%%%%                                      __                         __
+% Define    %%%                                     |     i           j        k  |
+% the Bloch %%%  gamma * cross(M , B1(t)) = gamma * |     Mx          My       Mz |
+% Equation  %%%                                     | B1*cos(wt)  -B1sin(wt)   B0 |
+%%%%%%%%%%%%%%%                                      __                         __
+
+B = @(t) [B1*cos(wrf*t); -B1*sin(wrf*t); B0];
+dMdt = @(t, M) gamma*cross(M,B(t));
+
+% Solve the differential equation using ode45
+[~, M] = ode45(dMdt, tspan, M0);
+
+% Plotting
+figure()
+subplot(2,1,1)
+plot3(M(1,1), M(1,2), M(1,3), '*r', 'LineWidth', 1.5); hold on;
+plot3([0;M(1,1)],[0;M(1,2)],[0;M(1,3)], '-r', 'LineWidth', 1.5); hold on;
+plot3(M(:,1), M(:,2), M(:,3), '-', 'color', [0.5 0.5 0.5]); hold on;   % gray color code
+plot3(M(end,1), M(end,2), M(end,3), '*black', 'LineWidth', 1.5); hold on;
+plot3([0;M(end,1)],[0;M(end,2)],[0;M(end,3)], '-black', 'LineWidth', 1.5);
+
+
+xlabel('M_x'); ylabel('M_y'); zlabel('M_z');
+title('Magnetization Trajectory (ON-Res)');
+legend('Start Point', '', 'Trajectory', 'End Point', '');
+grid on;
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Part B - OFF Resonance
+
+%%% Off Resonanse - Angular Velocity
+delta_w0 = 2*pi*10^(-3);   %w = 2*pi*f (rad.MHz)
+wrf = w0 + delta_w0;       %(rad.MHz)
+
+% Define the time span
+tspan = [0 2*pi/wrf];  % (micro sec)
+
+%%%%%%%%%%%%%%%                                    __                                  __
+% Define    %%%                                   |     i           j            k       |
+% the Bloch %%% = gamma * cross(M , B1) = gamma * |    M(1)        M(2)        M(3)      |
+% Equation  %%%                                   | B1*cos(wt)  -B1sin(wt)  B0-wrf/gamma |
+%%%%%%%%%%%%%%%                                    __                                  __
+
+B = @(t) [B1*cos(wrf*t); -B1*sin(wrf*t); B0-wrf/gamma];
+dMdt = @(t, M) gamma*cross(M,B(t));
+
+% Solve the differential equation using ode45
+[~, M] = ode45(dMdt, tspan, M0);
+
+% Plotting
+subplot(2,1,2)
+plot3(M(1,1), M(1,2), M(1,3), '*r', 'LineWidth', 1.5); hold on;
+plot3([0;M(1,1)],[0;M(1,2)],[0;M(1,3)], '-r', 'LineWidth', 1.5); hold on;
+plot3(M(:,1), M(:,2), M(:,3), '-', 'color', [0.5 0.5 0.5]); hold on;   % gray color code
+plot3(M(end-1,1), M(end-1,2), M(end-1,3), '*black', 'LineWidth', 1.5); hold on;
+plot3([0;M(end-1,1)],[0;M(end-1,2)],[0;M(end-1,3)], '-black', 'LineWidth', 1.5);
+
+xlabel('M_x'); ylabel('M_y'); zlabel('M_z');
+title('Magnetization Trajectory (Off-Res)');
+legend('Start Point', '', 'Trajectory', 'End Point', '');
+grid on;
+
+%% Question 2 - RF pulse and T1 & T2 Relaxation time
+
+%%% Part A - Rotation around x, y, and z Functions
+% This Function is written in the end of the codes
+
+%%% Part B - T1 & T2 relaxation times
+% A function for this part has been written in function part named "bloch"
+
+%%% Part C - Magnetization Vector: 60x - 15ms - 45y - 10ms
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Magnetization Vector before RF pulse
+
+M0 = [0, 0, 1];
+T1 = 1;   % sec (1000ms)
+T2 = 0.1; % sec (100ms)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% 60 degree rotation around x-axis
+
+degree = 60;
+alpha = 2*pi*degree / 360;
+M_alpha1 = Rx_alpha(alpha, M0');
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% 15 ms delay
+
+t = 15/1000;
+M_tau1 = bloch(T1, T2, M_alpha1, t);
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% 45 degree rotation around y-axis
+
+degree = 45;
+alpha = 2*pi*degree / 360;
+M_alpha2 = Ry_alpha(alpha, M_tau1);
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% 10 ms delay
+
+t = 1/100; % sec
+M_tau2 = bloch(T1, T2, M_alpha2, t);
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Degrees between some of vectors
+% note: to check whether the rotations and delays are applying properly
+
+Red_Black = rad2deg(acos(dotprod(M0, M_alpha1)/(norm(M0)*norm(M_alpha1))));
+Blue_Green = rad2deg(acos(dotprod(M_tau1', M_alpha2)/(norm(M_tau1)*norm(M_alpha2))));
+Red_Green = rad2deg(acos(dotprod(M_alpha1', M_alpha2)/(norm(M_alpha1)*norm(M_alpha2))));
+Yellow_Green = rad2deg(acos(dotprod(M_tau2', M_alpha2)/(norm(M_tau2)*norm(M_alpha2))));
+Red_Blue = rad2deg(acos(dotprod(M_tau1', M_alpha1)/(norm(M_tau1)*norm(M_alpha1))));
+Yellow_Blue = rad2deg(acos(dotprod(M_tau1', M_tau2)/(norm(M_tau1)*norm(M_tau2))));
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Plotting
+
+M_all = [M0', M_alpha1, M_tau1, M_alpha2, M_tau2];
+
+figure
+view([1, 1, 1]);
+axis([-1 1 -1 1 -1 1]);
+hold on; grid on;
+xlabel('x-axis'); ylabel('y-axis'); zlabel('z-axis');
+colors = ["black", "red", "blue", "green", "yellow"];
+legends = ["Before RF Pulse", "After 60x RF pulse", "After 15ms Delay", "After 45y RF pulse", "After 10ms Delay"];
+title('Magnetization Vector after every cycle')
+
+
+for k = 1:size(M_all, 2)
+    quiver3(0, 0, 0, M_all(1, k), M_all(2, k), M_all(3, k), 'Color', colors(k), 'LineWidth', 2);
+    legend(legends(1:k));
+    pause(1)
+end
+
+%%% Part D - 3ms delay along RF pulses
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Parameters:
+% 60x & 3ms:
+t = 3/1000;
+M_60x_3ms = Relax_and_Rotation(T1, T2, M0', t, 'x', 60);
+
+% 45y & 3ms:
+M_45y_3ms = Relax_and_Rotation(T1, T2, M_60x_3ms, t, 'y', 45);
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Degrees between some of vectors
+% note: to check whether the rotations and delays are applying properly
+
+black_red = rad2deg(acos(dotprod(M0, M_60x_3ms)/(norm(M0)*norm(M_60x_3ms))));
+Blue_Red = rad2deg(acos(dotprod(M_45y_3ms', M_60x_3ms)/(norm(M_45y_3ms)*norm(M_60x_3ms))));
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Plotting
+
+M_all = [M0', M_60x_3ms, M_45y_3ms];
+
+figure
+view([1, 1, 1]);
+axis([-1 1 -1 1 -1 1]);
+hold on; grid on;
+xlabel('x-axis'); ylabel('y-axis'); zlabel('z-axis');
+colors = ["black", "red", "blue"];
+legends = ["Before RF Pulse", "After 60x RF pulse", "After 45y RF pulse"];
+title('RF Pulse with effect of 3ms delay along it')
+
+for k = 1:size(M_all, 2)
+    quiver3(0, 0, 0, M_all(1, k), M_all(2, k), M_all(3, k), 'Color', colors(k), 'LineWidth', 2);
+    legend(legends(1:k));
+    pause(1)
+end
+
+
+%%% Comparing last Magnetization Vector of part C and part D %%%%%%%%%%%%%%
+teta = rad2deg(acos(dotprod(M_45y_3ms', M_tau2)/(norm(M_45y_3ms)*norm(M_tau2))));
+
+norm_of_C = norm(M_tau2);
+norm_of_D = norm(M_45y_3ms);
+
+
+%%% Plotting
+
+M_all = [M_tau2, M_45y_3ms];
+
+figure
+view([1, 1, 1]);
+axis([-.5 .5 -.5 .5 -.5 .5]);
+hold on; grid on;
+xlabel('x-axis'); ylabel('y-axis'); zlabel('z-axis');
+colors = ["yellow", "blue"];
+legends = ["Method I", "Method II"];
+title('Comparing Final Magnetization Vector of two Methods')
+
+for k = 1:size(M_all, 2)
+    quiver3(0, 0, 0, M_all(1, k), M_all(2, k), M_all(3, k), 'Color', colors(k), 'LineWidth', 2);
+    legend(legends(1:k));
+end
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%% Functions Part
+
+%%%% Q2 - Part A %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function M_prime = Rx_alpha(a, M)
+    Rx = [1    0      0    ;
+          0  cos(a) sin(a) ;
+          0 -sin(a) cos(a)];
+    M_prime = Rx * M;
+end
+function M_prime = Ry_alpha(a, M)
+    Ry = [cos(a)  0  -sin(a);
+            0     1    0    ;
+          sin(a)  0  cos(a)];
+    M_prime = Ry * M;
+end
+function M_prime = Rz_alpha(a, M)
+    Rz = [ cos(a) sin(a)  0 ;
+          -sin(a) cos(a)  0 ;
+             0      0     1];
+    M_prime = Rz * M;
+end
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+%%%% Q2 - Part B %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+function M_prime = bloch(T1, T2, M_prime, t)
+    
+    %%%%%%% Equations are derived from page 117 of The Book !    
+    Relaxation = [exp(-t/T2)      0          0      ;
+                       0      exp(-t/T2)     0      ;
+                       0          0      exp(-t/T1)];
+    
+    M_prime = (Relaxation * M_prime) + [0; 0; 1 - exp(-t/T1)];
+end
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+%%%% Q3 - Part D %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+function M_prime = Relax_and_Rotation(T1, T2, M_prime, t, Axis, a)
+
+    %%%%%%% Equations are derived from page 117 of The Book !    
+    Relaxation = [exp(-t/T2)      0          0      ;
+                       0      exp(-t/T2)     0      ;
+                       0          0      exp(-t/T1)];
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+    a = rad2deg(a);
+    offset = [0; 0; 1 - exp(-t/T1)];
+    if Axis == 'x'
+        M_prime = (Relaxation * Rx_alpha(a, M_prime)) + offset;
+    elseif Axis == 'y'
+        M_prime = (Relaxation * Ry_alpha(a, M_prime)) + offset;
+    else
+        M_prime = (Relaxation * Rz_alpha(a, M_prime)) + offset;
+    end
+end
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
