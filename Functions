@@ -1,0 +1,67 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Magnetic Resonance Imaging   %%%
+%%% Dr. Keyvan Fard - Fall 2023  %%%
+%%% Student: Mahla Jafari Nezhad %%%
+%%% Student ID: 40104224         %%%
+%%% HW's number: CA01            %%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%% Functions Part
+
+%%%% Q2 - Part A %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function M_prime = Rx_alpha(a, M)
+    Rx = [1    0      0    ;
+          0  cos(a) sin(a) ;
+          0 -sin(a) cos(a)];
+    M_prime = Rx * M;
+end
+function M_prime = Ry_alpha(a, M)
+    Ry = [cos(a)  0  -sin(a);
+            0     1    0    ;
+          sin(a)  0  cos(a)];
+    M_prime = Ry * M;
+end
+function M_prime = Rz_alpha(a, M)
+    Rz = [ cos(a) sin(a)  0 ;
+          -sin(a) cos(a)  0 ;
+             0      0     1];
+    M_prime = Rz * M;
+end
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+%%%% Q2 - Part B %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+function M_prime = bloch(T1, T2, M_prime, t)
+    
+    %%%%%%% Equations are derived from page 117 of The Book !    
+    Relaxation = [exp(-t/T2)      0          0      ;
+                       0      exp(-t/T2)     0      ;
+                       0          0      exp(-t/T1)];
+    
+    M_prime = (Relaxation * M_prime) + [0; 0; 1 - exp(-t/T1)];
+end
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+%%%% Q3 - Part D %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+function M_prime = Relax_and_Rotation(T1, T2, M_prime, t, Axis, a)
+
+    %%%%%%% Equations are derived from page 117 of The Book !    
+    Relaxation = [exp(-t/T2)      0          0      ;
+                       0      exp(-t/T2)     0      ;
+                       0          0      exp(-t/T1)];
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+    a = rad2deg(a);
+    offset = [0; 0; 1 - exp(-t/T1)];
+    if Axis == 'x'
+        M_prime = (Relaxation * Rx_alpha(a, M_prime)) + offset;
+    elseif Axis == 'y'
+        M_prime = (Relaxation * Ry_alpha(a, M_prime)) + offset;
+    else
+        M_prime = (Relaxation * Rz_alpha(a, M_prime)) + offset;
+    end
+end
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
